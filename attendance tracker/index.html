@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Attendance</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f8f6f9;
+      margin: 0;
+      padding: 40px;
+    }
+
+    h1 {
+      text-align: center;
+      font-weight: 500;
+      margin-bottom: 30px;
+    }
+
+    .container {
+      max-width: 680px;
+      margin: auto;
+    }
+
+    .subject {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 18px;
+      border: 1px solid #eee;
+    }
+
+    .stats {
+      font-size: 14px;
+      opacity: 0.75;
+      margin: 4px 0;
+    }
+
+    .week {
+      background: #f1eaf3;
+      padding: 6px 12px;
+      border-radius: 12px;
+      display: inline-block;
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    button {
+      margin-top: 10px;
+      margin-right: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+      background: #f0cde2;
+    }
+
+    .fab {
+      position: fixed;
+      right: 25px;
+      bottom: 25px;
+      width: 55px;
+      height: 55px;
+      border-radius: 50%;
+      font-size: 22px;
+      background: #f0cde2;
+      border: none;
+      cursor: pointer;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      background: rgba(0,0,0,0.2);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      width: 300px;
+    }
+
+    input {
+      width: 100%;
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Attendance</h1>
+
+<div class="container" id="subjects"></div>
+
+<button class="fab" onclick="openModal()">+</button>
+
+<div class="modal" id="modal">
+  <div class="card">
+    <h3>Add Subject</h3>
+    <input id="subjectName" placeholder="Subject name">
+
+    <div style="margin-top:8px;">
+      <label><input type="checkbox" value="Mon"> Mon</label>
+      <label><input type="checkbox" value="Tue"> Tue</label>
+      <label><input type="checkbox" value="Wed"> Wed</label>
+      <label><input type="checkbox" value="Thu"> Thu</label>
+      <label><input type="checkbox" value="Fri"> Fri</label>
+    </div>
+
+    <button onclick="addSubject()">Add</button>
+  </div>
+</div>
+
+<script>
+let subjects = [];
+
+try {
+  const stored = localStorage.getItem("subjects");
+  if (stored) subjects = JSON.parse(stored);
+} catch(e) {
+  subjects = [];
+}
+
+const MIN = 60;
+const today = new Date();
+const todayString = today.toISOString().split("T")[0];
+const todayDay = today.toLocaleString("en-us", { weekday: "short" });
+
+function save() {
+  localStorage.setItem("subjects", JSON.stringify(subjects));
+}
+
+function openModal() {
+  document.getElementById("modal").style.display = "flex";
+}
+
+function closeModal() {
+  document.getElementById("modal").style.display = "none";
+}
+
+function addSubject() {
+  const name = document.getElementById("subjectName").value.trim();
+  const checked = document.querySelectorAll("input[type='checkbox']:checked");
+  const days = Array.from(checked).map(cb => cb.value);
+
+  if (!name || days.length === 0) return;
+
+  subjects.push({
+    name: name,
+    days: days,
+    attendance: {}
+  });
+
+  save();
+  closeModal();
+  document.getElementById("subjectName").value = "";
+  checked.forEach(cb => cb.checked = false);
+  render();
+}
+
+function mark(index, status) {
+  subjects[index].attendance[todayString] = status;
+  save();
+  render();
+}
+
+function stats(subject) {
+  let p = 0, t = 0;
+  for (let d in subject.attendance) {
+    t++;
+    if (subject.attendance[d] === "present") p++;
+  }
+  return {p, t};
+}
+
+function weekly(subject) {
+  let p = 0, t = 0;
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay());
+
+  for (let d in subject.attendance) {
+    const date = new Date(d);
+    if (date >= weekStart) {
+      t++;
+      if (subject.attendance[d] === "present") p++;
+    }
+  }
+  return t === 0 ? 0 : Math.round((p/t)*100);
+}
+
+function render() {
+  const container = document.getElementById("subjects");
+  container.innerHTML = "";
+
+  subjects.forEach((sub, i) => {
+    const s = stats(sub);
+    const overall = s.t === 0 ? 0 : ((s.p/s.t)*100).toFixed(1);
+    const weekPercent = weekly(sub);
+    const isToday = sub.days.includes(todayDay);
+    const todayStatus = sub.attendance[todayString];
+
+    const box = document.createElement("div");
+    box.className = "subject";
+
+    box.innerHTML = `
+      <strong>${sub.name}</strong>
+      <div class="stats">Overall: ${overall}%</div>
+      <div class="week">This week: ${weekPercent}%</div>
+      ${
+        isToday
+        ? `
+          <div>
+            <button onclick="mark(${i},'present')" style="${todayStatus==='present'?'opacity:0.5':''}">
+              Present
+            </button>
+            <button onclick="mark(${i},'absent')" style="${todayStatus==='absent'?'opacity:0.5':''}">
+              Absent
+            </button>
+          </div>
+        `
+        : `<div class="stats">No class today</div>`
+      }
+    `;
+
+    container.appendChild(box);
+  });
+}
+
+render();
+</script>
+
+</body>
+</html>
