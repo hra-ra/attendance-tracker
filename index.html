@@ -3,237 +3,543 @@
 <head>
   <title>Attendance</title>
   <style>
+    :root {
+      --bg: #f7f6f8;
+      --card: #ffffff;
+      --text-primary: #2d2d2d;
+      --text-secondary: #6e6e73;
+      --accent: #e7c5d9;
+      --accent-hover: #ddb2cc;
+      --calendar-bg: #f2ecf3;
+    }
+
+    body.dark {
+      --bg: #1c1c1e;
+      --card: #2c2c2e;
+      --text-primary: #ffffff;
+      --text-secondary: #a1a1a6;
+      --accent: #e7c5d9;
+      --accent-hover: #ddb2cc;
+      --calendar-bg: #3a3a3c;
+    }
+
+    * { box-sizing: border-box; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #f8f6f9;
       margin: 0;
       padding: 40px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      transition: background 0.3s ease, color 0.3s ease;
     }
 
     h1 {
       text-align: center;
       font-weight: 500;
-      margin-bottom: 30px;
+      margin-bottom: 10px;
+    }
+
+    .toggle {
+      display: block;
+      margin: 0 auto 40px auto;
+      background: none;
+      border: 1px solid var(--text-secondary);
+      border-radius: 999px;
+      padding: 6px 14px;
+      color: var(--text-primary);
+      cursor: pointer;
     }
 
     .container {
-      max-width: 680px;
+      max-width: 720px;
       margin: auto;
     }
 
     .subject {
-      background: #ffffff;
-      border-radius: 16px;
-      padding: 20px;
-      margin-bottom: 18px;
-      border: 1px solid #eee;
+      background: var(--card);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.05);
+      position: relative;
+      transition: background 0.3s ease;
     }
 
     .stats {
       font-size: 14px;
-      opacity: 0.75;
-      margin: 4px 0;
-    }
-
-    .week {
-      background: #f1eaf3;
-      padding: 6px 12px;
-      border-radius: 12px;
-      display: inline-block;
-      font-size: 13px;
+      color: var(--text-secondary);
       margin-top: 6px;
     }
 
     button {
-      margin-top: 10px;
-      margin-right: 6px;
-      padding: 6px 14px;
-      border-radius: 20px;
       border: none;
       cursor: pointer;
-      background: #f0cde2;
+      border-radius: 999px;
+      padding: 8px 16px;
+      margin-top: 12px;
+      margin-right: 8px;
+      font-size: 14px;
+      background: var(--accent);
+      transition: 150ms ease;
+    }
+
+    button:hover { background: var(--accent-hover); }
+    button:active { transform: scale(0.97); }
+
+    .delete-btn {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      background: #efefef;
+      font-size: 12px;
+    }
+
+    body.dark .delete-btn {
+      background: #3a3a3c;
+      color: white;
     }
 
     .fab {
       position: fixed;
-      right: 25px;
-      bottom: 25px;
-      width: 55px;
-      height: 55px;
+      right: 30px;
+      bottom: 30px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       font-size: 22px;
-      background: #f0cde2;
-      border: none;
-      cursor: pointer;
+      background: var(--accent);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
     }
 
+    /* Modal Animation */
     .modal {
       position: fixed;
       inset: 0;
-      display: none;
       background: rgba(0,0,0,0.2);
+      backdrop-filter: blur(6px);
+      display: none;
       justify-content: center;
       align-items: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal.show {
+      display: flex;
+      opacity: 1;
     }
 
     .card {
-      background: white;
-      padding: 20px;
-      border-radius: 16px;
-      width: 300px;
+      background: var(--card);
+      width: 340px;
+      padding: 28px;
+      border-radius: 28px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      transform: scale(0.95);
+      transition: transform 0.2s ease;
     }
 
-    input {
-      width: 100%;
-      margin-top: 8px;
-      padding: 8px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
+    .modal.show .card {
+      transform: scale(1);
     }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid #e6e6e6;
+      font-size: 14px;
+    }
+
+    .checkbox-group {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .checkbox-row input {
+      transform: scale(1.1);
+      accent-color: var(--accent);
+    }
+    .confirm-modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.25);
+  backdrop-filter:blur(8px);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:100;
+}
+
+.confirm-modal.show{
+  display:flex;
+}
+
+.confirm-card{
+  background:var(--card);
+  width:320px;
+  padding:24px;
+  border-radius:24px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.15);
+  animation:fadeIn 0.2s ease;
+}
+
+.confirm-title{
+  font-weight:600;
+  margin-bottom:8px;
+}
+
+.confirm-text{
+  font-size:14px;
+  color:var(--text-secondary);
+  margin-bottom:18px;
+}
+
+.confirm-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+.cancel-btn{
+  background:none;
+  border:1px solid rgba(0,0,0,0.1);
+}
+
+body.dark .cancel-btn{
+  border:1px solid rgba(255,255,255,0.2);
+  color:white;
+}
+
+.danger-btn{
+  background:rgba(0,0,0,0.08);
+}
+
+body.dark .danger-btn{
+  background:rgba(255,255,255,0.1);
+  color:white;
+}
+
+@keyframes fadeIn{
+  from{opacity:0; transform:scale(0.95);}
+  to{opacity:1; transform:scale(1);}
+}
+    /* Month navigation */
+.month-nav{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:13px;
+  margin-bottom:8px;
+  padding:0 4px;
+}
+
+.month-label{
+  font-weight:500;
+}
+
+.month-arrows{
+  display:flex;
+  gap:10px;
+}
+
+.month-arrows span{
+  cursor:pointer;
+  padding:4px 8px;
+  border-radius:8px;
+  transition:0.15s ease;
+}
+
+.month-arrows span:hover{
+  background:rgba(0,0,0,0.05);
+}
+
+body.dark .month-arrows span:hover{
+  background:rgba(255,255,255,0.08);
+}
+
+/* Calendar grid */
+.calendar-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:4px;
+  background:var(--calendar-bg);
+  padding:8px;
+  border-radius:14px;
+}
+
+/* Calendar day */
+.day{
+  position:relative;
+  text-align:center;
+  padding:6px 0;
+  font-size:12px;
+  border-radius:10px;
+  transition:0.2s ease;
+}
+
+.day:hover{
+  transform:scale(1.05);
+  cursor:pointer;
+}
+
+/* Today ring */
+.today{
+  box-shadow:0 0 0 1.5px var(--accent);
+}
+
+/* Attendance states */
+.present{
+  background:rgba(231,197,217,0.5);
+}
+
+.absent{
+  background:rgba(0,0,0,0.06);
+}
+
+body.dark .absent{
+  background:rgba(255,255,255,0.1);
+}
+
+/* Minimal popover */
+.popover{
+  position:absolute;
+  bottom:110%;
+  left:50%;
+  transform:translateX(-50%);
+  display:none;
+  gap:6px;
+  padding:6px 8px;
+  border-radius:999px;
+  backdrop-filter:blur(12px);
+  background:rgba(255,255,255,0.6);
+}
+
+body.dark .popover{
+  background:rgba(40,40,42,0.6);
+}
+
+.popover button{
+  background:none;
+  border:1px solid rgba(0,0,0,0.1);
+  padding:4px 8px;
+  font-size:11px;
+  border-radius:999px;
+}
+
+body.dark .popover button{
+  border:1px solid rgba(255,255,255,0.2);
+  color:white;
+}
+
+.day:hover .popover{
+  display:flex;
+}
   </style>
 </head>
 <body>
 
 <h1>Attendance</h1>
+<button class="toggle" onclick="toggleDark()">Toggle Dark Mode</button>
 
 <div class="container" id="subjects"></div>
 
 <button class="fab" onclick="openModal()">+</button>
 
-<div class="modal" id="modal">
-  <div class="card">
+<div class="modal" id="modal" onclick="outsideClick(event)">
+  <div class="card" onclick="event.stopPropagation()">
     <h3>Add Subject</h3>
-    <input id="subjectName" placeholder="Subject name">
-
-    <div style="margin-top:8px;">
-      <label><input type="checkbox" value="Mon"> Mon</label>
-      <label><input type="checkbox" value="Tue"> Tue</label>
-      <label><input type="checkbox" value="Wed"> Wed</label>
-      <label><input type="checkbox" value="Thu"> Thu</label>
-      <label><input type="checkbox" value="Fri"> Fri</label>
+    <input id="subjectName" type="text" placeholder="Subject name" oninput="validateForm()">
+    <div class="checkbox-group">
+      <label class="checkbox-row"><input type="checkbox" value="Mon" onchange="validateForm()"> Mon</label>
+      <label class="checkbox-row"><input type="checkbox" value="Tue" onchange="validateForm()"> Tue</label>
+      <label class="checkbox-row"><input type="checkbox" value="Wed" onchange="validateForm()"> Wed</label>
+      <label class="checkbox-row"><input type="checkbox" value="Thu" onchange="validateForm()"> Thu</label>
+      <label class="checkbox-row"><input type="checkbox" value="Fri" onchange="validateForm()"> Fri</label>
     </div>
-
-    <button onclick="addSubject()">Add</button>
+    <button id="addBtn" onclick="addSubject()" disabled style="width:100%; margin-top:16px;">Add</button>
   </div>
 </div>
 
 <script>
-let subjects = [];
+  let deleteIndex = null;
+let subjects = JSON.parse(localStorage.getItem("subjects")) || [];
+const TARGET = 75;
 
-try {
-  const stored = localStorage.getItem("subjects");
-  if (stored) subjects = JSON.parse(stored);
-} catch(e) {
-  subjects = [];
-}
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
 
-const MIN = 60;
 const today = new Date();
 const todayString = today.toISOString().split("T")[0];
-const todayDay = today.toLocaleString("en-us", { weekday: "short" });
 
 function save() {
   localStorage.setItem("subjects", JSON.stringify(subjects));
 }
 
+function toggleDark() {
+  document.body.classList.toggle("dark");
+}
+
 function openModal() {
-  document.getElementById("modal").style.display = "flex";
+  document.getElementById("modal").classList.add("show");
 }
 
-function closeModal() {
-  document.getElementById("modal").style.display = "none";
+function outsideClick(e) {
+  if (e.target.id === "modal") {
+    document.getElementById("modal").classList.remove("show");
+  }
 }
 
-function addSubject() {
-  const name = document.getElementById("subjectName").value.trim();
-  const checked = document.querySelectorAll("input[type='checkbox']:checked");
-  const days = Array.from(checked).map(cb => cb.value);
+function deleteSubject(i){
+  deleteIndex = i;
+  document.getElementById("confirmModal").classList.add("show");
+}
+function closeConfirm(){
+  deleteIndex = null;
+  document.getElementById("confirmModal").classList.remove("show");
+}
 
-  if (!name || days.length === 0) return;
+function confirmDelete(){
+  if(deleteIndex !== null){
+    subjects.splice(deleteIndex,1);
+    save();
+    render();
+  }
+  closeConfirm();
+}
 
-  subjects.push({
-    name: name,
-    days: days,
-    attendance: {}
-  });
-
+function markDate(subjectIndex, dateStr, status) {
+  if (status === "clear") {
+    delete subjects[subjectIndex].attendance[dateStr];
+  } else {
+    subjects[subjectIndex].attendance[dateStr] = status;
+  }
   save();
-  closeModal();
-  document.getElementById("subjectName").value = "";
-  checked.forEach(cb => cb.checked = false);
   render();
 }
 
-function mark(index, status) {
-  subjects[index].attendance[todayString] = status;
-  save();
-  render();
-}
-
-function stats(subject) {
-  let p = 0, t = 0;
-  for (let d in subject.attendance) {
+function stats(sub){
+  let p=0,t=0;
+  for(let d in sub.attendance){
     t++;
-    if (subject.attendance[d] === "present") p++;
+    if(sub.attendance[d]==="present")p++;
   }
-  return {p, t};
+  return {p,t};
 }
 
-function weekly(subject) {
-  let p = 0, t = 0;
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay());
+function prediction(sub){
+  const s=stats(sub);
+  if(s.t===0)return "No data yet.";
+  let needed=0;
+  while(((s.p+needed)/(s.t+needed))*100<TARGET)needed++;
+  return "Need "+needed+" presents to reach "+TARGET+"%";
+}
 
-  for (let d in subject.attendance) {
-    const date = new Date(d);
-    if (date >= weekStart) {
-      t++;
-      if (subject.attendance[d] === "present") p++;
+function changeMonth(offset){
+  currentMonth+=offset;
+  if(currentMonth>11){currentMonth=0;currentYear++;}
+  if(currentMonth<0){currentMonth=11;currentYear--;}
+  render();
+}
+
+function calendarView(sub,index){
+  const firstDay=new Date(currentYear,currentMonth,1).getDay();
+  const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
+
+  let html="";
+  html+="<div class='month-nav'>";
+html+="<div class='month-label'>"+
+new Date(currentYear,currentMonth)
+.toLocaleString("en-us",{month:"long",year:"numeric"})+
+"</div>";
+html+="<div class='month-arrows'>";
+html+="<span onclick='changeMonth(-1)'>&lt;</span>";
+html+="<span onclick='changeMonth(1)'>&gt;</span>";
+html+="</div>";
+html+="</div>";
+
+  html+="<div class='calendar-grid'>";
+
+  for(let i=0;i<firstDay;i++){
+    html+="<div class='day empty'></div>";
+  }
+
+  for(let d=1;d<=daysInMonth;d++){
+    const dateObj=new Date(currentYear,currentMonth,d);
+    const dateStr=dateObj.toISOString().split("T")[0];
+    const status=sub.attendance[dateStr];
+    const dayShort=dateObj.toLocaleString("en-us",{weekday:"short"});
+    const isClass=sub.days.includes(dayShort);
+    const isToday=(dateStr===todayString);
+
+    let classes="day";
+    if(status==="present")classes+=" present";
+    if(status==="absent")classes+=" absent";
+    if(!isClass)classes+=" no-class";
+    if(isToday)classes+=" today";
+
+    html+="<div class='"+classes+"'>"+d;
+
+    if(isClass){
+      html+="<div class='popover'>";
+      html+="<button onclick=\"markDate("+index+",'"+dateStr+"','present')\">Present</button>";
+      html+="<button onclick=\"markDate("+index+",'"+dateStr+"','absent')\">Absent</button>";
+      html+="<button onclick=\"markDate("+index+",'"+dateStr+"','clear')\">Clear</button>";
+      html+="</div>";
     }
+
+    html+="</div>";
   }
-  return t === 0 ? 0 : Math.round((p/t)*100);
+
+  html+="</div>";
+  return html;
 }
 
-function render() {
-  const container = document.getElementById("subjects");
-  container.innerHTML = "";
+function render(){
+  const container=document.getElementById("subjects");
+  container.innerHTML="";
 
-  subjects.forEach((sub, i) => {
-    const s = stats(sub);
-    const overall = s.t === 0 ? 0 : ((s.p/s.t)*100).toFixed(1);
-    const weekPercent = weekly(sub);
-    const isToday = sub.days.includes(todayDay);
-    const todayStatus = sub.attendance[todayString];
+  subjects.forEach(function(sub,i){
+    const s=stats(sub);
+    const overall=s.t===0?0:((s.p/s.t)*100).toFixed(1);
 
-    const box = document.createElement("div");
-    box.className = "subject";
+    const div=document.createElement("div");
+    div.className="subject";
+    div.innerHTML=
+      "<button class='delete-btn' onclick='deleteSubject("+i+")'>Delete</button>"+
+      "<strong>"+sub.name+"</strong>"+
+      "<div class='stats'>Overall: "+overall+"%</div>"+
+      "<div class='stats'>"+prediction(sub)+"</div>"+
+      "<div class='calendar-wrapper'>"+calendarView(sub,i)+"</div>";
 
-    box.innerHTML = `
-      <strong>${sub.name}</strong>
-      <div class="stats">Overall: ${overall}%</div>
-      <div class="week">This week: ${weekPercent}%</div>
-      ${
-        isToday
-        ? `
-          <div>
-            <button onclick="mark(${i},'present')" style="${todayStatus==='present'?'opacity:0.5':''}">
-              Present
-            </button>
-            <button onclick="mark(${i},'absent')" style="${todayStatus==='absent'?'opacity:0.5':''}">
-              Absent
-            </button>
-          </div>
-        `
-        : `<div class="stats">No class today</div>`
-      }
-    `;
-
-    container.appendChild(box);
+    container.appendChild(div);
   });
 }
 
 render();
 </script>
-
+<div class="confirm-modal" id="confirmModal">
+  <div class="confirm-card">
+    <div class="confirm-title">Delete subject?</div>
+    <div class="confirm-text">
+      This will permanently remove the subject and all attendance data.
+    </div>
+    <div class="confirm-actions">
+      <button class="cancel-btn" onclick="closeConfirm()">Cancel</button>
+      <button class="danger-btn" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
