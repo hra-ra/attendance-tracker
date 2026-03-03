@@ -217,6 +217,7 @@
   border:1px solid rgba(0,0,0,0.1);
 }
 
+
 body.dark .cancel-btn{
   border:1px solid rgba(255,255,255,0.2);
   color:white;
@@ -346,6 +347,161 @@ body.dark .popover button{
 .day:hover .popover{
   display:flex;
 }
+.analytics{
+  margin-top:14px;
+}
+
+.big-percent{
+  font-size:28px;
+  font-weight:600;
+}
+
+.percent-label{
+  font-size:12px;
+  color:var(--text-secondary);
+  margin-bottom:8px;
+}
+
+.progress-bar{
+  height:6px;
+  background:rgba(0,0,0,0.06);
+  border-radius:999px;
+  overflow:hidden;
+  margin-bottom:12px;
+}
+
+body.dark .progress-bar{
+  background:rgba(255,255,255,0.08);
+}
+
+.progress-fill{
+  height:100%;
+  background:var(--accent);
+  border-radius:999px;
+}
+
+.mini-stats{
+  display:flex;
+  justify-content:space-between;
+  font-size:12px;
+  margin-bottom:10px;
+}
+
+.mini-stats strong{
+  font-size:14px;
+}
+
+.status-text{
+  font-size:13px;
+  font-weight:500;
+  margin-bottom:4px;
+}
+
+.subtle-info{
+  font-size:12px;
+  color:var(--text-secondary);
+}
+.top-status-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:8px;
+}
+
+.streak-text{
+  font-size:13px;
+  font-weight:500;
+}
+
+.bunk-chip span{
+  font-size:12px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:500;
+}
+
+.safe{
+  background:rgba(76,175,80,0.12);
+  color:#2e7d32;
+}
+
+.warning{
+  background:rgba(255,152,0,0.12);
+  color:#e65100;
+}
+
+.danger{
+  background:rgba(244,67,54,0.12);
+  color:#b71c1c;
+}
+
+.neutral{
+  background:rgba(0,0,0,0.05);
+}
+
+body.dark .neutral{
+  background:rgba(255,255,255,0.1);
+}
+.ring-wrapper{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  margin-bottom:12px;
+}
+
+.ring-container{
+  position:relative;
+  width:100px;
+  height:100px;
+}
+
+.ring-container svg{
+  transform:rotate(-90deg);
+}
+
+.ring-bg{
+  fill:none;
+  stroke:rgba(0,0,0,0.06);
+  stroke-width:8;
+}
+
+body.dark .ring-bg{
+  stroke:rgba(255,255,255,0.08);
+}
+
+.ring-progress{
+  fill:none;
+  stroke-width:8;
+  stroke-linecap:round;
+  transition:stroke-dashoffset 0.4s ease;
+}
+
+.ring-text{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-size:18px;
+  font-weight:600;
+}
+
+/* Color States */
+
+.ring-high .ring-progress{
+  stroke:#4caf50;
+}
+
+.ring-target .ring-progress{
+  stroke:var(--accent);
+}
+
+.ring-mid .ring-progress{
+  stroke:#ff9800;
+}
+
+.ring-low .ring-progress{
+  stroke:#f44336;
+}
   </style>
 </head>
 <body>
@@ -373,7 +529,7 @@ body.dark .popover button{
 </div>
 
 <script>
-  let deleteIndex = null;
+let deleteIndex = null;
 let subjects = JSON.parse(localStorage.getItem("subjects")) || [];
 const TARGET = 75;
 
@@ -383,12 +539,20 @@ let currentYear = new Date().getFullYear();
 const today = new Date();
 const todayString = today.toISOString().split("T")[0];
 
-function save() {
-  localStorage.setItem("subjects", JSON.stringify(subjects));
+/* ---------- Dark Mode Persistence ---------- */
+if(localStorage.getItem("darkMode")==="true"){
+  document.body.classList.add("dark");
 }
 
 function toggleDark() {
   document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode",
+    document.body.classList.contains("dark"));
+}
+
+/* ---------- Utilities ---------- */
+function save() {
+  localStorage.setItem("subjects", JSON.stringify(subjects));
 }
 
 function openModal() {
@@ -401,10 +565,37 @@ function outsideClick(e) {
   }
 }
 
+/* ---------- Validation ---------- */
+function validateForm() {
+  const name = document.getElementById("subjectName").value.trim();
+  const checked = document.querySelectorAll(".checkbox-group input:checked");
+  document.getElementById("addBtn").disabled = !(name && checked.length > 0);
+}
+
+/* ---------- Add Subject ---------- */
+function addSubject() {
+  const name = document.getElementById("subjectName").value.trim();
+  const checked = document.querySelectorAll(".checkbox-group input:checked");
+  const days = Array.from(checked).map(cb => cb.value);
+
+  if (!name || days.length === 0) return;
+
+  subjects.push({ name: name, days: days, attendance: {} });
+  save();
+  render();
+
+  document.getElementById("subjectName").value="";
+  checked.forEach(cb=>cb.checked=false);
+  document.getElementById("addBtn").disabled=true;
+  document.getElementById("modal").classList.remove("show");
+}
+
+/* ---------- Delete ---------- */
 function deleteSubject(i){
   deleteIndex = i;
   document.getElementById("confirmModal").classList.add("show");
 }
+
 function closeConfirm(){
   deleteIndex = null;
   document.getElementById("confirmModal").classList.remove("show");
@@ -419,33 +610,101 @@ function confirmDelete(){
   closeConfirm();
 }
 
-function markDate(subjectIndex, dateStr, status) {
+/* ---------- Attendance ---------- */
+function markDate(index, dateStr, status) {
   if (status === "clear") {
-    delete subjects[subjectIndex].attendance[dateStr];
+    delete subjects[index].attendance[dateStr];
   } else {
-    subjects[subjectIndex].attendance[dateStr] = status;
+    subjects[index].attendance[dateStr] = status;
   }
   save();
   render();
 }
 
 function stats(sub){
-  let p=0,t=0;
+  let present=0,total=0;
   for(let d in sub.attendance){
-    t++;
-    if(sub.attendance[d]==="present")p++;
+    total++;
+    if(sub.attendance[d]==="present") present++;
   }
-  return {p,t};
+  return {present,total};
+}
+function circularProgress(percent){
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percent/100) * circumference;
+
+  let colorClass = "ring-low";
+  if(percent >= 85) colorClass = "ring-high";
+  else if(percent >= 75) colorClass = "ring-target";
+  else if(percent >= 60) colorClass = "ring-mid";
+
+  return `
+  <div class="ring-container ${colorClass}">
+    <svg width="100" height="100">
+      <circle class="ring-bg"
+        cx="50" cy="50" r="${radius}" />
+      <circle class="ring-progress"
+        cx="50" cy="50" r="${radius}"
+        stroke-dasharray="${circumference}"
+        stroke-dashoffset="${offset}" />
+    </svg>
+    <div class="ring-text">${percent}%</div>
+  </div>
+  `;
 }
 
-function prediction(sub){
-  const s=stats(sub);
-  if(s.t===0)return "No data yet.";
-  let needed=0;
-  while(((s.p+needed)/(s.t+needed))*100<TARGET)needed++;
-  return "Need "+needed+" presents to reach "+TARGET+"%";
+/* ---------- Streak ---------- */
+function streakText(sub){
+  const dates = Object.keys(sub.attendance)
+    .filter(d => sub.attendance[d]==="present")
+    .sort()
+    .reverse();
+
+  if(dates.length===0) return "No streak";
+
+  let streak=1;
+  for(let i=1;i<dates.length;i++){
+    const prev=new Date(dates[i-1]);
+    const curr=new Date(dates[i]);
+    const diff=(prev-curr)/(1000*60*60*24);
+    if(diff===1) streak++;
+    else break;
+  }
+
+  return streak+" Day Streak 🔥";
 }
 
+/* ---------- Safe Bunk Chip ---------- */
+function safeBunkChip(sub){
+  const s = stats(sub);
+  if(s.total===0) return "<span class='neutral'>No Data</span>";
+
+  const currentPercent = (s.present/s.total)*100;
+
+  if(currentPercent < TARGET){
+    return "<span class='danger'>Below Target</span>";
+  }
+
+  let canSkip=0;
+  while((s.present/(s.total+canSkip))*100 >= TARGET){
+    canSkip++;
+  }
+
+  canSkip = canSkip - 1;
+
+  if(canSkip <= 0){
+    return "<span class='warning'>No Safe Bunks</span>";
+  }
+
+  if(canSkip === 1){
+    return "<span class='safe'>Safe to Skip 1 Class</span>";
+  }
+
+  return "<span class='safe'>Safe to Skip "+canSkip+" Classes</span>";
+}
+
+/* ---------- Month Navigation ---------- */
 function changeMonth(offset){
   currentMonth+=offset;
   if(currentMonth>11){currentMonth=0;currentYear++;}
@@ -453,26 +712,26 @@ function changeMonth(offset){
   render();
 }
 
+/* ---------- Calendar ---------- */
 function calendarView(sub,index){
   const firstDay=new Date(currentYear,currentMonth,1).getDay();
   const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
 
   let html="";
   html+="<div class='month-nav'>";
-html+="<div class='month-label'>"+
-new Date(currentYear,currentMonth)
-.toLocaleString("en-us",{month:"long",year:"numeric"})+
-"</div>";
-html+="<div class='month-arrows'>";
-html+="<span onclick='changeMonth(-1)'>&lt;</span>";
-html+="<span onclick='changeMonth(1)'>&gt;</span>";
-html+="</div>";
-html+="</div>";
+  html+="<div class='month-label'>"+
+    new Date(currentYear,currentMonth)
+    .toLocaleString("en-us",{month:"long",year:"numeric"})+
+    "</div>";
+  html+="<div class='month-arrows'>";
+  html+="<span onclick='changeMonth(-1)'>&lt;</span>";
+  html+="<span onclick='changeMonth(1)'>&gt;</span>";
+  html+="</div></div>";
 
   html+="<div class='calendar-grid'>";
 
   for(let i=0;i<firstDay;i++){
-    html+="<div class='day empty'></div>";
+    html+="<div></div>";
   }
 
   for(let d=1;d<=daysInMonth;d++){
@@ -484,18 +743,17 @@ html+="</div>";
     const isToday=(dateStr===todayString);
 
     let classes="day";
-    if(status==="present")classes+=" present";
-    if(status==="absent")classes+=" absent";
-    if(!isClass)classes+=" no-class";
-    if(isToday)classes+=" today";
+    if(status==="present") classes+=" present";
+    if(status==="absent") classes+=" absent";
+    if(isToday) classes+=" today";
 
     html+="<div class='"+classes+"'>"+d;
 
     if(isClass){
       html+="<div class='popover'>";
-      html+="<button onclick=\"markDate("+index+",'"+dateStr+"','present')\">Present</button>";
-      html+="<button onclick=\"markDate("+index+",'"+dateStr+"','absent')\">Absent</button>";
-      html+="<button onclick=\"markDate("+index+",'"+dateStr+"','clear')\">Clear</button>";
+      html+="<button onclick=\"markDate("+index+",'"+dateStr+"','present')\">P</button>";
+      html+="<button onclick=\"markDate("+index+",'"+dateStr+"','absent')\">A</button>";
+      html+="<button onclick=\"markDate("+index+",'"+dateStr+"','clear')\">✕</button>";
       html+="</div>";
     }
 
@@ -506,27 +764,47 @@ html+="</div>";
   return html;
 }
 
+/* ---------- Render ---------- */
 function render(){
   const container=document.getElementById("subjects");
   container.innerHTML="";
 
   subjects.forEach(function(sub,i){
-    const s=stats(sub);
-    const overall=s.t===0?0:((s.p/s.t)*100).toFixed(1);
+    const s = stats(sub);
+    const percent = s.total===0 ? 0 :
+      ((s.present/s.total)*100).toFixed(1);
 
     const div=document.createElement("div");
     div.className="subject";
+
     div.innerHTML=
       "<button class='delete-btn' onclick='deleteSubject("+i+")'>Delete</button>"+
-      "<strong>"+sub.name+"</strong>"+
-      "<div class='stats'>Overall: "+overall+"%</div>"+
-      "<div class='stats'>"+prediction(sub)+"</div>"+
-      "<div class='calendar-wrapper'>"+calendarView(sub,i)+"</div>";
+
+      "<div class='subject-header'>"+
+        "<div class='subject-title'>"+sub.name+"</div>"+
+        circularProgress(percent)+
+      "</div>"+
+
+      "<div class='header-divider'></div>"+
+
+      "<div class='mini-stats'>"+
+        "<div>Present<br><strong>"+s.present+"</strong></div>"+
+        "<div>Absent<br><strong>"+(s.total-s.present)+"</strong></div>"+
+        "<div>Total<br><strong>"+s.total+"</strong></div>"+
+      "</div>"+
+
+      "<div class='top-status-row'>"+
+        "<div class='streak-text'>"+streakText(sub)+"</div>"+
+        "<div class='bunk-chip'>"+safeBunkChip(sub)+"</div>"+
+      "</div>"+
+
+      "<div class='calendar-wrapper'>"+
+        calendarView(sub,i)+
+      "</div>";
 
     container.appendChild(div);
   });
 }
-
 render();
 </script>
 <div class="confirm-modal" id="confirmModal">
